@@ -49,5 +49,5 @@ SavedItemSchema.index(
     { unique: true }
 );
 
-const SavedItem = mongoose.model("SavedItem", SavedItemSchema);
-export default SavedItem;
+const ItemModel = mongoose.model("SavedItem", SavedItemSchema);
+export default ItemModel;

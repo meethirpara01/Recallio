@@ -2,9 +2,11 @@
   "dependencies": {
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.71.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3"
   },
