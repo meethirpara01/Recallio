@@ -1,4 +1,5 @@
 import ItemModel from "./item.model.js";
+import { itemQueue } from "./item.queue.js";
 import { extractDomain, normalizeUrl } from "./item.repository.js";
 
 
@@ -17,7 +18,7 @@ export const createItem = async (req, res) => {
     }
 
     const normalizedUrl = normalizeUrl(url);
-    console.log(normalizeUrl);
+    console.log(normalizedUrl);
     const domain = extractDomain(url);
     console.log(domain);
 
@@ -33,6 +34,11 @@ export const createItem = async (req, res) => {
             domain,
             status: "PENDING"
         });
+
+        await itemQueue.add("process-item", {
+            itemId: newItem._id.toString(),
+        });
+        console.log("Job added:", newItem._id);
 
         return res.status(201).json({
             id: newItem._id,
