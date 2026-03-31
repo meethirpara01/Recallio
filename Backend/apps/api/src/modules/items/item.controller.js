@@ -1,6 +1,7 @@
 import ItemModel from "./item.model.js";
 import { itemQueue } from "./item.queue.js";
 import { extractDomain, normalizeUrl } from "./item.repository.js";
+import { generateEmbedding } from "../../utils/embedding.js";
 
 
 export const createItem = async (req, res) => {
@@ -83,3 +84,135 @@ export const getItems = async (req, res) => {
         return res.status(500).json({ error: "Failed to fetch items" });
     }
 };
+
+export const searchItems = async (req, res) => {
+    try {
+        const { q } = req.query;
+        const userId = req.user.id;
+
+        if (!q) {
+            return res.status(400).json({ error: "Query required" });
+        }
+
+        // 🔥 1. Generate query embedding
+        const queryEmbedding = await generateEmbedding(q);
+        console.log("Query Embedding Length:", queryEmbedding.length);
+
+        if (!queryEmbedding || queryEmbedding.length === 0) {
+            return res.status(500).json({ error: "Failed to generate embedding" });
+        }
+
+        // 🔥 2. Fetch only valid items
+        const items = await ItemModel.find({
+            userId,
+            embedding: { $exists: true, $ne: [] },
+            status: "processed",
+            // contentQuality: { $ne: "failed" },
+        });
+
+        console.log("Items found:", items.length);
+
+        // 🔥 3. Cosine similarity
+        const cosineSimilarity = (a, b) => {
+            let dot = 0;
+            let magA = 0;
+            let magB = 0;
+
+            for (let i = 0; i < a.length; i++) {
+                dot += a[i] * b[i];
+                magA += a[i] * a[i];
+                magB += b[i] * b[i];
+            }
+
+            return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+        };
+
+        // 🔥 4. Score + boost
+        const results = items
+            .map((item) => {
+                if (!item.embedding || item.embedding.length !== queryEmbedding.length) {
+                    return null;
+                }
+
+                let score = cosineSimilarity(queryEmbedding, item.embedding);
+
+                // ❌ skip invalid scores
+                if (isNaN(score)) return null;
+
+                // 🔥 BOOST: title match
+                if (item.title?.toLowerCase().includes(q.toLowerCase())) {
+                    score += 0.2;
+                }
+
+                // 🔥 BOOST: tag match
+                if (item.tags?.some(tag =>
+                    tag.toLowerCase().includes(q.toLowerCase())
+                )) {
+                    score += 0.15;
+                }
+
+                return { item, score };
+            })
+            .filter((r) => r && r.score > 0.6); // 🔥 threshold
+
+        // 🔥 5. Sort best first
+        results.sort((a, b) => b.score - a.score);
+
+        console.log("Final Results:", results.map(r => r.score));
+
+        // 🔥 6. Return top results
+        return res.json(results.slice(0, 5));
+
+    } catch (error) {
+        console.error("Search error:", error);
+        return res.status(500).json({ error: "Search failed" });
+    }
+};
+
+// export const searchItems = async (req, res) => {
+//     const { q } = req.query;
+//     const userId = req.user.id;
+
+//     if (!q) {
+//         return res.status(400).json({ error: "Query required" });
+//     }
+
+//     //1. Convert query → embedding
+//     const queryEmbedding = await generateEmbedding(q);
+//     console.log("Query Embedding Length:", queryEmbedding.length);
+
+//     // 2. Fetch user items
+//     const items = await ItemModel.find({
+//         userId,
+//         embedding: { $exists: true },
+//     });
+//     console.log("Item Embedding Length:", items[0]?.embedding?.length);
+
+//     //3. Cosine similarity
+//     const cosineSimilarity = (a, b) => {
+//         let dot = 0;
+//         let magA = 0;
+//         let magB = 0;
+
+//         for (let i = 0; i < a.length; i++) {
+//             dot += a[i] * b[i];
+//             magA += a[i] * a[i];
+//             magB += b[i] * b[i];
+//         }
+
+//         return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+//     };
+
+//     //4. Score items
+//     const results = items.map((item) => {
+//         const score = cosineSimilarity(queryEmbedding, item.embedding);
+//         console.log("Score:", score);
+
+//         return { item, score };
+//     });
+
+//     //5. Sort best first
+//     results.sort((a, b) => b.score - a.score);
+
+//     return res.json(results.slice(0, 5));
+// };
