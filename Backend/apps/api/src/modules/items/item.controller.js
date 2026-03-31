@@ -216,3 +216,95 @@ export const searchItems = async (req, res) => {
 
 //     return res.json(results.slice(0, 5));
 // };
+
+
+
+export const resurfaceItems = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const items = await ItemModel.find({
+            userId,
+            status: "processed",
+            contentQuality: { $ne: "failed" },
+        });
+
+        const now = new Date();
+
+        const scored = items.map((item) => {
+            const daysOld =
+                (now - new Date(item.createdAt)) / (1000 * 60 * 60 * 24);
+
+            let score = 0;
+
+            // resurfacing logic
+            if (daysOld > 2) score += 0.3;
+            if (daysOld > 7) score += 0.5;
+            if (daysOld > 30) score += 0.8;
+
+            return { item, score, daysOld };
+        });
+
+        const results = scored
+            .filter((r) => r.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+
+        return res.json(results);
+    } catch (err) {
+        console.error("Resurface error:", err);
+        res.status(500).json({ error: "Failed to resurface" });
+    }
+};
+
+
+const cosineSimilarity = (a, b) => {
+    let dot = 0;
+    let magA = 0;
+    let magB = 0;
+
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        magA += a[i] * a[i];
+        magB += b[i] * b[i];
+    }
+
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+};
+
+export const relatedItems = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { itemId } = req.params;
+
+        const currentItem = await ItemModel.findById(itemId);
+
+        if (!currentItem || !currentItem.embedding) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+
+        const items = await ItemModel.find({
+            userId,
+            _id: { $ne: itemId },
+            embedding: { $exists: true },
+        });
+
+        const results = items
+            .map((item) => {
+                const score = cosineSimilarity(
+                    currentItem.embedding,
+                    item.embedding
+                );
+
+                return { item, score };
+            })
+            .filter((r) => r.score > 0.6)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+
+        return res.json(results);
+    } catch (err) {
+        console.error("Related error:", err);
+        res.status(500).json({ error: "Failed to fetch related items" });
+    }
+};
