@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -25,7 +26,6 @@ export const generateTags = async (text) => {
 
     } catch (err) {
         console.error("Gemini tagging failed:", err.message);
-        // return fallbackTags(text);
         return [];
     }
 };

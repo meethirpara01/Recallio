@@ -43,6 +43,9 @@ const SavedItemSchema = new mongoose.Schema(
         retryCount: { type: Number, default: 0 },
         errorMessage: { type: String },
         tags: [String],
+        embedding: {
+            type: [Number],
+        },
         lastProcessedAt: Date,
     },
     { timestamps: true }

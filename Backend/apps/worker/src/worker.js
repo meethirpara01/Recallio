@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
-dotenv.config({ path: "../../.env" });
+dotenv.config({ path: "../../../.env" });
 import { generateTags } from "../../api/src/utils/ai.js";
+import { generateEmbedding } from "../../api/src/utils/embedding.js";
 
 import axios from "axios";
 import * as cheerio from "cheerio";
@@ -17,6 +18,8 @@ import ItemModel from "../../api/src/modules/items/item.model.js";
 
 console.log("Worker Started...");
 console.log("REDIS_URL:", process.env.REDIS_URL);
+console.log("GEMINI_API_KEY:", process.env.GEMINI_API_KEY);
+
 
 const worker = new Worker("item-processing", async (job) => {
   console.log("Job received!");
@@ -69,8 +72,10 @@ const worker = new Worker("item-processing", async (job) => {
     const cleanedTitle = article?.title || metaTitle;
 
     const tags = await generateTags(content);
-
     console.log("🏷️ Tags:", tags);
+
+    const embedding = await generateEmbedding(content);
+    console.log("📐 Embedding length:", embedding.length);
 
     // 3. CONTENT QUALITY
     let contentQuality = "failed";
@@ -87,6 +92,7 @@ const worker = new Worker("item-processing", async (job) => {
     item.image = image;
     item.extractedText = content;
     item.tags = tags;
+    item.embedding = embedding;
     item.contentQuality = contentQuality;
     item.status = "processed";
     item.lastProcessedAt = new Date();

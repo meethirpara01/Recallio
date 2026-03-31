@@ -4,6 +4,7 @@
     "@bull-board/express": "^6.20.6",
     "@bull-board/ui": "^6.20.6",
     "@google/generative-ai": "^0.24.1",
+    "@mistralai/mistralai": "^2.1.2",
     "@mozilla/readability": "^0.6.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
