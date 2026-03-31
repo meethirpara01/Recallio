@@ -8,4 +8,4 @@ itemRouter.post("/items", authMiddleware, createItem);
 
 itemRouter.get("/items", authMiddleware, getItems);
 
-export default itemRouter;  
+export default itemRouter;

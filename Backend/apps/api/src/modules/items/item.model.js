@@ -25,13 +25,16 @@ const SavedItemSchema = new mongoose.Schema(
         description: {
             type: String
         },
+        image: {
+            type: String
+        },
         extractedText: {
             type: String
         },
         status: {
             type: String,
-            enum: ["PENDING", "PROCESSING", "PROCESSED", "FAILED", "DELETED"],
-            default: "PENDING"
+            enum: ["pending", "processing", "processed", "failed", "deleted"],
+            default: "pending"
         },
         contentQuality: {
             type: String,
@@ -39,6 +42,8 @@ const SavedItemSchema = new mongoose.Schema(
         },
         retryCount: { type: Number, default: 0 },
         errorMessage: { type: String },
+        tags: [String],
+        lastProcessedAt: Date,
     },
     { timestamps: true }
 );

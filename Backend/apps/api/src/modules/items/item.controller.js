@@ -32,12 +32,22 @@ export const createItem = async (req, res) => {
             url,
             normalizedUrl,
             domain,
-            status: "PENDING"
+            status: "pending"
         });
 
-        await itemQueue.add("process-item", {
-            itemId: newItem._id.toString(),
-        });
+        await itemQueue.add(
+            "process-item",
+            { itemId: newItem._id },
+            {
+                attempts: 3, // retry 3 times
+                backoff: {
+                    type: "exponential",
+                    delay: 5000, // 5 seconds
+                },
+                removeOnComplete: true,
+                removeOnFail: false,
+            }
+        );
         console.log("Job added:", newItem._id);
 
         return res.status(201).json({
@@ -63,7 +73,7 @@ export const getItems = async (req, res) => {
     try {
         const items = await ItemModel.find({
             userId,
-            status: { $ne: "DELETED" }
+            status: { $ne: "deleted" }
         }).sort({ createdAt: -1 });
 
         return res.status(200).json(items);

@@ -1,8 +1,3 @@
-// 1. receive Google user data
-// 2. map fields
-// 3. call user repository
-// 4. return user
-
 import { findByGoogleId, findByEmail, createUser } from "../user/user.repository.js";
 
 export const handleGoogleUser = async (googleUserData) => {
