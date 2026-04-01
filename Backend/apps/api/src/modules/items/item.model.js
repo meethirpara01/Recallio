@@ -43,6 +43,12 @@ const SavedItemSchema = new mongoose.Schema(
         retryCount: { type: Number, default: 0 },
         errorMessage: { type: String },
         tags: [String],
+        relatedItems: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "SavedItem"
+            }
+        ],
         embedding: {
             type: [Number],
         },

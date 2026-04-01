@@ -77,6 +77,36 @@ const worker = new Worker("item-processing", async (job) => {
     const embedding = await generateEmbedding(content);
     console.log("📐 Embedding length:", embedding.length);
 
+    const items = await ItemModel.find({
+      userId: item.userId,
+      _id: { $ne: item._id },
+      embedding: { $exists: true }
+    });
+
+    const cosineSimilarity = (a, b) => {
+      let dot = 0;
+      let magA = 0;
+      let magB = 0;
+
+      for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        magA += a[i] * a[i];
+        magB += b[i] * b[i];
+      }
+
+      return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+    };
+
+    const related = items
+      .map((other) => {
+        const score = cosineSimilarity(item.embedding, other.embedding);
+        return { id: other._id, score };
+      })
+      .filter((r) => r.score > 0.4)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((r) => r.id);
+
     // 3. CONTENT QUALITY
     let contentQuality = "failed";
 
@@ -93,6 +123,7 @@ const worker = new Worker("item-processing", async (job) => {
     item.extractedText = content;
     item.tags = tags;
     item.embedding = embedding;
+    item.relatedItems = related;
     item.contentQuality = contentQuality;
     item.status = "processed";
     item.lastProcessedAt = new Date();
